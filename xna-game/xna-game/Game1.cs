@@ -8,21 +8,39 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using System.Windows.Forms;
+
+using XKeys = Microsoft.Xna.Framework.Input.Keys;
 
 namespace xna_game
 {
+    
+    
     /// <summary>
     /// This is the main type for your game
     /// </summary>
     public class Game1 : Microsoft.Xna.Framework.Game
     {
+
+        //----------------------------------------------------------
+        //GLOBAL VARS
+        //----------------------------------------------------------
+        int screenWidth = 1280;
+        int screenHeight = 720;
+        bool ScreenBorder = true;
+
         GraphicsDeviceManager graphics;
+        GraphicsDevice device;
         SpriteBatch spriteBatch;
+        Texture2D backgroundTexture;
 
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
+            device = graphics.GraphicsDevice;
+            //screenWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+            //screenHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
         }
 
         /// <summary>
@@ -36,6 +54,10 @@ namespace xna_game
             // TODO: Add your initialization logic here
 
             base.Initialize();
+            graphics.PreferredBackBufferWidth = screenWidth;
+            graphics.PreferredBackBufferHeight = screenHeight;
+            graphics.ApplyChanges();
+            
         }
 
         /// <summary>
@@ -48,6 +70,8 @@ namespace xna_game
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here
+            backgroundTexture = Content.Load<Texture2D>("cloudsBackground");
+            
         }
 
         /// <summary>
@@ -67,10 +91,11 @@ namespace xna_game
         protected override void Update(GameTime gameTime)
         {
             // Allows the game to exit
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == Microsoft.Xna.Framework.Input.ButtonState.Pressed)
                 this.Exit();
 
             // TODO: Add your update logic here
+            ProcessKeyboard();
 
             base.Update(gameTime);
         }
@@ -84,8 +109,39 @@ namespace xna_game
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             // TODO: Add your drawing code here
+            spriteBatch.Begin();
+            drawBackground();
+            spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void drawBackground()
+        {
+            Rectangle screenRectangle = new Rectangle(0, 0, screenWidth, screenHeight);
+            spriteBatch.Draw(backgroundTexture, screenRectangle, Color.White);
+        }
+
+        private void ProcessKeyboard()
+        {
+            KeyboardState keybState = Keyboard.GetState();
+            if (keybState.IsKeyDown(XKeys.F))
+            {
+                //toggle fullscreen on or off
+                graphics.ToggleFullScreen();
+            }
+            else if(keybState.IsKeyDown(XKeys.W))
+            {
+                IntPtr hWnd = this.Window.Handle;
+                var control = System.Windows.Forms.Control.FromHandle(hWnd);
+                var form = control.FindForm();
+                form.FormBorderStyle = ScreenBorder ? System.Windows.Forms.FormBorderStyle.FixedSingle : System.Windows.Forms.FormBorderStyle.None;
+                ScreenBorder = !ScreenBorder;
+            }
+            else if (keybState.IsKeyDown(XKeys.Escape))
+            {
+                Exit();
+            }
         }
     }
 }
