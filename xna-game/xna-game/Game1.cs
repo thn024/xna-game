@@ -33,6 +33,10 @@ namespace xna_game
         GraphicsDevice device;
         SpriteBatch spriteBatch;
         Texture2D backgroundTexture;
+        Texture2D characterTexture;
+        KeyboardState keyState;
+        KeyboardState prevKeyState;
+        ParticleEngine2D.ParticleEngine particleEngine;
 
         public Game1()
         {
@@ -71,7 +75,12 @@ namespace xna_game
 
             // TODO: use this.Content to load your game content here
             backgroundTexture = Content.Load<Texture2D>("cloudsBackground");
-            
+            characterTexture = Content.Load<Texture2D>("character");
+            List<Texture2D> textures = new List<Texture2D>();
+            textures.Add(Content.Load<Texture2D>("circle"));
+            textures.Add(Content.Load<Texture2D>("star"));
+            textures.Add(Content.Load<Texture2D>("diamond"));
+            particleEngine = new ParticleEngine2D.ParticleEngine(textures, new Vector2(400, 240));
         }
 
         /// <summary>
@@ -96,6 +105,8 @@ namespace xna_game
 
             // TODO: Add your update logic here
             ProcessKeyboard();
+            particleEngine.EmitterLocation = new Vector2(Mouse.GetState().X, Mouse.GetState().Y);
+            particleEngine.Update();
 
             base.Update(gameTime);
         }
@@ -109,8 +120,16 @@ namespace xna_game
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             // TODO: Add your drawing code here
+            
+
             spriteBatch.Begin();
             drawBackground();
+            spriteBatch.End();
+
+            particleEngine.Draw(spriteBatch);
+
+            spriteBatch.Begin();
+            drawCharacter();
             spriteBatch.End();
 
             base.Draw(gameTime);
@@ -122,23 +141,46 @@ namespace xna_game
             spriteBatch.Draw(backgroundTexture, screenRectangle, Color.White);
         }
 
+        private void drawCharacter()
+        {
+            Rectangle screenRectangle = new Rectangle(Mouse.GetState().X-10, Mouse.GetState().Y-50, 60, 90);
+            spriteBatch.Draw(characterTexture, screenRectangle, Color.White);
+        }
+
         private void ProcessKeyboard()
         {
-            KeyboardState keybState = Keyboard.GetState();
-            if (keybState.IsKeyDown(XKeys.F))
+            prevKeyState = keyState;
+            keyState = Keyboard.GetState();
+            if (keyState.IsKeyDown(XKeys.F) && prevKeyState.IsKeyUp(XKeys.F))
             {
                 //toggle fullscreen on or off
-                graphics.ToggleFullScreen();
+                //graphics.ToggleFullScreen();
             }
-            else if(keybState.IsKeyDown(XKeys.W))
+            else if (keyState.IsKeyDown(XKeys.W) && prevKeyState.IsKeyUp(XKeys.W))
             {
                 IntPtr hWnd = this.Window.Handle;
                 var control = System.Windows.Forms.Control.FromHandle(hWnd);
                 var form = control.FindForm();
-                form.FormBorderStyle = ScreenBorder ? System.Windows.Forms.FormBorderStyle.FixedSingle : System.Windows.Forms.FormBorderStyle.None;
+                if (ScreenBorder)
+                {
+                    //default 1280 by 720 window
+                    form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+                    form.WindowState = System.Windows.Forms.FormWindowState.Normal;
+                    screenWidth = 1280;
+                    screenHeight = 720;
+                }
+                else
+                {
+                    //borderless fullscreen
+                    form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+                    form.WindowState = System.Windows.Forms.FormWindowState.Maximized;
+                    screenWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+                    screenHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+                }
+                
                 ScreenBorder = !ScreenBorder;
             }
-            else if (keybState.IsKeyDown(XKeys.Escape))
+            else if (keyState.IsKeyDown(XKeys.Escape))
             {
                 Exit();
             }
