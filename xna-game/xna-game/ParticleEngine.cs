@@ -22,18 +22,11 @@ namespace ParticleEngine2D
             random = new Random();
         }
 
-        public void Update()
+        public void Update(GameTime gameTime)
         {
-            int total = 10;
-
-            for (int i = 0; i < total; i++)
-            {
-                particles.Add(GenerateNewParticle());
-            }
-
             for (int particle = 0; particle < particles.Count; particle++)
             {
-                particles[particle].Update();
+                particles[particle].Update(gameTime);
                 if (particles[particle].TTL <= 0)
                 {
                     particles.RemoveAt(particle);
@@ -54,7 +47,9 @@ namespace ParticleEngine2D
             Color color = new Color(
                         (float)random.NextDouble(),
                         (float)random.NextDouble(),
-                        (float)random.NextDouble());
+                        (float)random.NextDouble(),
+                        1.0f);
+                        
             float size = (float)random.NextDouble();
             int ttl = 20 + random.Next(40);
 
@@ -69,6 +64,16 @@ namespace ParticleEngine2D
                 particles[index].Draw(spriteBatch);
             }
             spriteBatch.End();
+        }
+
+        public void GenerateParticlesClick()
+        {
+            int total = 15;
+            for (int i = 0; i < total; i++)
+            {
+                particles.Add(GenerateNewParticle());
+            }
+  
         }
     }
 }

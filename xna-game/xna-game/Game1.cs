@@ -102,12 +102,15 @@ namespace xna_game
             // Allows the game to exit
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == Microsoft.Xna.Framework.Input.ButtonState.Pressed)
                 this.Exit();
-
+           
             // TODO: Add your update logic here
             ProcessKeyboard();
-            particleEngine.EmitterLocation = new Vector2(Mouse.GetState().X, Mouse.GetState().Y);
-            particleEngine.Update();
-
+            if(Keyboard.GetState().IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Space))
+            {
+                particleEngine.EmitterLocation = new Vector2(Mouse.GetState().X, Mouse.GetState().Y);
+                particleEngine.GenerateParticlesClick();
+            }
+            particleEngine.Update(gameTime);
             base.Update(gameTime);
         }
 
