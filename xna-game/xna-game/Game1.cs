@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Media;
 using System.Windows.Forms;
 
 using XKeys = Microsoft.Xna.Framework.Input.Keys;
+using System.Diagnostics;
 
 namespace xna_game
 {
@@ -25,8 +26,8 @@ namespace xna_game
         //----------------------------------------------------------
         //GLOBAL VARS
         //----------------------------------------------------------
-        int screenWidth = 1280;
-        int screenHeight = 720;
+        int screenWidth = 800;
+        int screenHeight = 480;
         bool ScreenBorder = true;
 
         GraphicsDeviceManager graphics;
@@ -34,9 +35,13 @@ namespace xna_game
         SpriteBatch spriteBatch;
         Texture2D backgroundTexture;
         Texture2D characterTexture;
+        Texture2D crosshair;
         KeyboardState keyState;
         KeyboardState prevKeyState;
         ParticleEngine2D.ParticleEngine particleEngine;
+        Vector2 charPos = new Vector2(230, 380);
+        float startY, jumpspeed = 0;
+        bool jumping = false;//Init jumping to false
 
         public Game1()
         {
@@ -61,6 +66,9 @@ namespace xna_game
             graphics.PreferredBackBufferWidth = screenWidth;
             graphics.PreferredBackBufferHeight = screenHeight;
             graphics.ApplyChanges();
+            startY = charPos.Y;//Starting position
+            jumping = false;//Init jumping to false
+            jumpspeed = 0;//Default no speed
             
         }
 
@@ -74,8 +82,9 @@ namespace xna_game
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here
-            backgroundTexture = Content.Load<Texture2D>("cloudsBackground");
-            characterTexture = Content.Load<Texture2D>("character");
+            backgroundTexture = Content.Load<Texture2D>("background");
+            characterTexture = Content.Load<Texture2D>("char2");
+            crosshair = Content.Load<Texture2D>("crosshair");
             List<Texture2D> textures = new List<Texture2D>();
             textures.Add(Content.Load<Texture2D>("circle"));
             textures.Add(Content.Load<Texture2D>("star"));
@@ -129,6 +138,7 @@ namespace xna_game
             particleEngine.Draw(spriteBatch);
 
             spriteBatch.Begin();
+            drawCrosshair();
             drawCharacter();
             spriteBatch.End();
 
@@ -143,20 +153,45 @@ namespace xna_game
 
         private void drawCharacter()
         {
-            Rectangle screenRectangle = new Rectangle(Mouse.GetState().X-10, Mouse.GetState().Y-50, 60, 90);
+            Rectangle screenRectangle = new Rectangle((int)charPos.X, (int)charPos.Y, 90, 90);
             spriteBatch.Draw(characterTexture, screenRectangle, Color.White);
+        }
+
+        private void drawCrosshair()
+        {
+            Rectangle screenRectangle = new Rectangle(Mouse.GetState().X-10, Mouse.GetState().Y-10, 20,20);
+            spriteBatch.Draw(crosshair, screenRectangle, Color.White);
         }
 
         private void ProcessKeyboard()
         {
             prevKeyState = keyState;
             keyState = Keyboard.GetState();
-            if (keyState.IsKeyDown(XKeys.F) && prevKeyState.IsKeyUp(XKeys.F))
+
+
+            if (jumping)
             {
-                //toggle fullscreen on or off
-                //graphics.ToggleFullScreen();
+                charPos.Y -= jumpspeed;//Making it go up
+                jumpspeed += 1;//Some math (explained later)
+                System.Console.WriteLine(charPos.Y);
+                if (charPos.Y <= 200)
+                //If it's farther than ground
+                {
+                    
+                    jumping = false;
+                    jumpspeed = 0;
+                }
             }
-            else if (keyState.IsKeyDown(XKeys.W) && prevKeyState.IsKeyUp(XKeys.W))
+            else
+            {
+                if (charPos.Y <= 400)
+                {
+                    charPos.Y += jumpspeed;
+                    jumpspeed++;
+                }
+            }
+
+            if (keyState.IsKeyDown(XKeys.F) && prevKeyState.IsKeyUp(XKeys.F))
             {
                 IntPtr hWnd = this.Window.Handle;
                 var control = System.Windows.Forms.Control.FromHandle(hWnd);
@@ -166,8 +201,8 @@ namespace xna_game
                     //default 1280 by 720 window
                     form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
                     form.WindowState = System.Windows.Forms.FormWindowState.Normal;
-                    screenWidth = 1280;
-                    screenHeight = 720;
+                    screenWidth = 800;
+                    screenHeight = 480;
                 }
                 else
                 {
@@ -177,13 +212,38 @@ namespace xna_game
                     screenWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
                     screenHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
                 }
-                
+
                 ScreenBorder = !ScreenBorder;
+            }
+            else if (keyState.IsKeyDown(XKeys.W) && prevKeyState.IsKeyUp(XKeys.W))
+            {
+                if (jumping == false)
+                {
+                    jumping = true;
+                }
+                System.Console.WriteLine("jumping");
+            }
+            else if (keyState.IsKeyDown(XKeys.S) && prevKeyState.IsKeyUp(XKeys.S))
+            {
+                //Move Down
+            }
+            else if (keyState.IsKeyDown(XKeys.A))
+            {
+                charPos.X -= 5;
+                System.Console.WriteLine("left");
+            }
+            else if (keyState.IsKeyDown(XKeys.D))
+            {
+                charPos.X += 5;
             }
             else if (keyState.IsKeyDown(XKeys.Escape))
             {
                 Exit();
             }
+        }
+
+        private void jump()
+        {
         }
     }
 }
