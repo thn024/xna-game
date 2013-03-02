@@ -51,6 +51,7 @@ namespace xna_game
         // Jumping state
         private bool isJumping;
         private bool wasJumping;
+        private bool inAJump;
         private float jumpTime;
 
         private Rectangle localBounds;
@@ -178,6 +179,7 @@ namespace xna_game
                 keyboardState.IsKeyDown(Keys.Space) ||
                 keyboardState.IsKeyDown(Keys.Up) ||
                 keyboardState.IsKeyDown(Keys.W);
+            
         }
 
         public void ApplyPhysics(GameTime gameTime, Texture2D background)
@@ -231,6 +233,7 @@ namespace xna_game
                 if ((!wasJumping && isOnGround) || jumpTime > 0.0f)
                 {
                     jumpTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    
                 }
 
                 // If we are in the ascent of the jump
@@ -249,6 +252,7 @@ namespace xna_game
             {
                 // Continues not jumping or cancels a jump in progress
                 jumpTime = 0.0f;
+                
             }
             wasJumping = isJumping;
 
@@ -267,11 +271,26 @@ namespace xna_game
                 //System.Console.WriteLine(bounds.Top + "" + bounds.Bottom);
                 if (isOnGround)
                 {
-                    Position = new Vector2(Position.X, previousPosition.Y);
+                    if (isJumping)
+                    {
+                        Position = new Vector2(Position.X, previousPosition.Y);
+                    }
+                    else
+                    {
+                        Position = new Vector2(Position.X, previousPosition.Y);
+                    }
                 }
                 else
                 {
-                    Position = new Vector2(previousPosition.X, previousPosition.Y);
+                    System.Console.WriteLine(inAJump);
+                    if (inAJump)
+                    {
+                        Position = new Vector2(previousPosition.X, Position.Y);
+                    }
+                    else
+                    {
+                        Position = new Vector2(previousPosition.X, previousPosition.Y);
+                    }
                 }
 
                 // Perform further collisions with the new bounds.
@@ -312,7 +331,17 @@ namespace xna_game
                         //System.Console.WriteLine("collided at: " + (x - rectangleA.Left) + " " + (y - rectangleA.Top) + "against " + (x - rectangleB.Left) + " " + (y - rectangleB.Top));
                         if (colorB.B > 200)
                         {
+                            System.Console.WriteLine("on ground");
+                            if (dataB[(x - rectangleB.Left) + ((int)previousPosition.Y + 32) * rectangleB.Width].B > 200)
+                            {
+                                System.Console.WriteLine("was blue above");
+                                previousPosition.Y = previousPosition.Y - 4;
+                            }
                             isOnGround = true;
+                        }
+                        else
+                        {
+                            System.Console.WriteLine(colorB.B);
                         }
                         collidedY = (y - rectangleB.Top);
                         collidedX = (x - rectangleB.Left);
