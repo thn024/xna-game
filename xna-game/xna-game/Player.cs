@@ -23,7 +23,7 @@ namespace xna_game
             set { position = value; }
         }
         Vector2 position;
-
+        Vector2 previousPosition;
         private float previousBottom;
 
         public Vector2 Velocity
@@ -54,10 +54,19 @@ namespace xna_game
         private float jumpTime;
 
         private Rectangle localBounds;
-
+        Rectangle screenRectangle = new Rectangle(0, 0, 800, 480);
         private Texture2D playerTexture;
         private int playerWidth;
         private int playerHeight;
+
+        Texture2D levelTexture;
+        Color[] playerTextureData;
+        Color[] levelTextureData;
+
+        private float prevx;
+        private float prevy;
+        bool xMovement;
+        bool yMovement;
 
         public bool IsOnGround
         {
@@ -91,8 +100,9 @@ namespace xna_game
             get
             {
                 int left = (int)Math.Round(Position.X - playerWidth/2) + localBounds.X;
-                int top = (int)Math.Round(Position.Y - playerHeight) + localBounds.Y;
-                return new Rectangle(left, top, localBounds.Width * 2, localBounds.Height);
+                int top = (int)Math.Round(Position.Y - playerHeight/2) + localBounds.Y;
+                //System.Console.WriteLine(Position.Y);
+                return new Rectangle((int)Position.X, (int)Position.Y, playerWidth/2, playerHeight/2);
             }
         }
         
@@ -103,17 +113,22 @@ namespace xna_game
         public void LoadContent()
         {
             //playerTexture = Level.Content.Load<Texture2D>("Sprites/Player/Idle");
-            playerTexture = Level.Content.Load<Texture2D>("character");
+            playerTexture = Level.Content.Load<Texture2D>("char");
+            levelTexture = Level.Content.Load<Texture2D>("Levels/Level0");
 
-            // Calculate bounds within texture size.            
-            int width = 25;
-            int x = 10;
-            int height = 50;
-            int y = 10;
-            System.Console.WriteLine("current = " + width + " " + height + " " + x + " " + y);
-            playerWidth = 25;
-            playerHeight = 50;
-            localBounds = new Rectangle(x, y, width, height);
+            levelTextureData =
+                new Color[levelTexture.Width * levelTexture.Height];
+            levelTexture.GetData(levelTextureData);
+            playerTextureData =
+                new Color[playerTexture.Width * playerTexture.Height];
+            playerTexture.GetData(playerTextureData);
+
+            // Calculate bounds within texture size.
+            //playerWidth = 25;
+            //playerHeight = 50;
+            playerWidth = playerTexture.Width;
+            playerHeight = playerTexture.Height;
+            localBounds = new Rectangle(0, 0, playerWidth, playerHeight);
 
         }
 
@@ -121,12 +136,13 @@ namespace xna_game
             GameTime gameTime,
             KeyboardState keyboardState,
             GamePadState gamePadState,
-            DisplayOrientation orientation)
+            DisplayOrientation orientation,
+            Texture2D background)
         {
             //System.Console.WriteLine("in Update");
             GetInput(keyboardState, gamePadState, orientation);
 
-            ApplyPhysics(gameTime);
+            ApplyPhysics(gameTime, background);
 
             // Clear input.
             movement = 0.0f;
@@ -141,10 +157,12 @@ namespace xna_game
         {
             //System.Console.WriteLine("in get input");
             // Ignore small movements to prevent running in place.
-            
+            xMovement = false;
+            yMovement = false;
             if (Math.Abs(movement) < 0.5f)
             {
                 movement = 0.0f;
+                
             }
              
 
@@ -155,12 +173,14 @@ namespace xna_game
             {
                 System.Console.WriteLine("moving left");
                 movement = -1.0f;
+                xMovement = true;
             }
             else if (gamePadState.IsButtonDown(Buttons.DPadRight) ||
                      keyboardState.IsKeyDown(Keys.Right) ||
                      keyboardState.IsKeyDown(Keys.D))
             {
                 movement = 1.0f;
+                xMovement = true;
             }
 
             // Check if the player wants to jump.
@@ -170,11 +190,11 @@ namespace xna_game
                 keyboardState.IsKeyDown(Keys.W);
         }
 
-        public void ApplyPhysics(GameTime gameTime)
+        public void ApplyPhysics(GameTime gameTime, Texture2D background)
         {
             float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            Vector2 previousPosition = Position;
+            previousPosition = Position;
 
             // Base velocity is a combination of horizontal movement control and
             // acceleration downward due to gravity.
@@ -202,7 +222,7 @@ namespace xna_game
             Position = new Vector2((float)Math.Round(Position.X), (float)Math.Round(Position.Y));
 
             // If the player is now colliding with the level, separate them.
-            HandleCollisions();
+            HandleCollisions(background);
 
             // If the collision stopped us from moving, reset the velocity to zero.
             if (Position.X == previousPosition.X)
@@ -245,87 +265,78 @@ namespace xna_game
             return velocityY;
         }
 
-        private void HandleCollisions()
+        private void HandleCollisions(Texture2D Background)
         {
-            // Get the player's bounding rectangle and find neighboring tiles.
             Rectangle bounds = BoundingRectangle;
-            int leftTile = (int)Math.Floor((float)bounds.Left / Tile.Width);
-            int rightTile = (int)Math.Ceiling(((float)bounds.Right / Tile.Width)) - 1;
-            int topTile = (int)Math.Floor((float)bounds.Top / Tile.Height);
-            int bottomTile = (int)Math.Ceiling(((float)bounds.Bottom / Tile.Height)) - 1;
-
-            //System.Console.WriteLine("Tile Height = " + (float)bounds.Top);
-            //System.Console.WriteLine(leftTile + " " + rightTile + " " + topTile + " " + bottomTile);
-
-            // Reset flag to search for ground collision.
+            //System.Console.WriteLine(bounds.Top + "" + bounds.Bottom);
             isOnGround = false;
-
-            // For each potentially colliding tile,
-            for (int y = topTile; y <= bottomTile; ++y)
+            if ((IntersectPixels(bounds, playerTextureData, screenRectangle, levelTextureData)))
+            //if ((IntersectPixels(screenRectangle, levelTextureData, bounds, playerTextureData)))
             {
-                for (int x = leftTile; x <= rightTile; ++x)
+                //Console.WriteLine("collided");
+                //System.Console.WriteLine(bounds.Top + "" + bounds.Bottom);
+                Position = new Vector2(Position.X, previousPosition.Y);
+
+                // Perform further collisions with the new bounds.
+                bounds = BoundingRectangle;
+                isOnGround = true;
+            }
+            else
+            {
+                Console.WriteLine("falling");
+                isOnGround = false;
+            }
+            previousBottom = bounds.Bottom;
+        }
+
+        public static bool IntersectPixels(Rectangle rectangleA, Color[] dataA,
+                                           Rectangle rectangleB, Color[] dataB)
+        {
+            // Find the bounds of the rectangle intersection
+            int top = Math.Max(rectangleA.Top, rectangleB.Top);
+            int bottom = Math.Min(rectangleA.Bottom, rectangleB.Bottom);
+            int left = Math.Max(rectangleA.Left, rectangleB.Left);
+            int right = Math.Min(rectangleA.Right, rectangleB.Right);
+
+            // Check every point within the intersection bounds
+            for (int y = top; y < bottom; y++)
+            {
+                for (int x = left; x < right; x++)
                 {
-                    // If this tile is collidable,
-                    TileCollision collision = Level.GetCollision(x, y);
-                    if (collision != TileCollision.Passable)
+                    // Get the color of both pixels at this point
+                    int dataAindex = (x - rectangleA.Left) +
+                                         (y - rectangleA.Top) * rectangleA.Width;
+                    Color colorA = dataA[dataAindex];
+                    int dataBindex = (x - rectangleB.Left) +
+                                         (y - rectangleB.Top) * rectangleB.Width;
+                    Color colorB = dataB[dataBindex];
+
+                    // If both pixels are not completely transparent,
+                    if (colorA.A != 0 && colorB.A != 0)
                     {
-                        // Determine collision depth (with direction) and magnitude.
-                        Rectangle tileBounds = Level.GetBounds(x, y);
-                        Vector2 depth = RectangleExtensions.GetIntersectionDepth(bounds, tileBounds);
-                        if (depth != Vector2.Zero)
-                        {
-                            float absDepthX = Math.Abs(depth.X);
-                            float absDepthY = Math.Abs(depth.Y);
-
-                            // Resolve the collision along the shallow axis.
-                            if (absDepthY < absDepthX || collision == TileCollision.Platform)
-                            {
-                                // If we crossed the top of a tile, we are on the ground.
-                                if (previousBottom <= tileBounds.Top)
-                                {
-                                    isOnGround = true;
-                                }
-
-                                // Ignore platforms, unless we are on the ground.
-                                if (collision == TileCollision.Impassable || IsOnGround)
-                                {
-                                    // Resolve the collision along the Y axis.
-                                    if (IsOnGround)
-                                    {
-                                        //System.Console.WriteLine("in this block");
-                                    }
-                                    
-                                    Position = new Vector2(Position.X, Position.Y + depth.Y);
-
-                                    // Perform further collisions with the new bounds.
-                                    bounds = BoundingRectangle;
-                                }
-                            }
-                            else if (collision == TileCollision.Impassable) // Ignore platforms.
-                            {
-                                // Resolve the collision along the X axis.
-                                Position = new Vector2(Position.X, Position.Y);
-                                Console.WriteLine("Depth.X = " + depth.X);
-
-                                // Perform further collisions with the new bounds.
-                                bounds = BoundingRectangle;
-                            }
-                        }
+                        System.Console.WriteLine("collided at: " + (x - rectangleA.Left) + " " + (y - rectangleA.Top) + "against " + (x - rectangleB.Left) + " " + (y - rectangleB.Top));
+                        // then an intersection has been found
+                        return true;
                     }
                 }
             }
 
-            // Save the new bounds bottom.
-            previousBottom = bounds.Bottom;
+            // No intersection found
+            return false;
         }
+
+            // For each potentially colliding tile
 
         public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
 
             // Draw that sprite.
-            Vector2 origin = new Vector2(Position.X - playerTexture.Width / 2, Position.Y - playerTexture.Height);
+            //Vector2 origin = new Vector2(Position.X - playerTexture.Width / 2, Position.Y - playerTexture.Height);
             //spriteBatch.Draw(playerTexture, Position, localBounds, Color.White, 0.0f, origin,SpriteEffects.None, 0.0f);
+            spriteBatch.Draw(levelTexture, screenRectangle, Color.White);
             spriteBatch.Draw(playerTexture, BoundingRectangle  , Color.White);
+            
+            
         }
 
 

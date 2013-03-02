@@ -28,6 +28,7 @@ namespace xna_game
         // Physical structure of the level.
         private Tile[,] tiles;
         private Texture2D[] layers;
+        private Texture2D levelTexture;
         // The layer which entities are drawn on top of.
         private const int EntityLayer = 2;
 
@@ -92,7 +93,8 @@ namespace xna_game
 
             timeRemaining = TimeSpan.FromMinutes(2.0);
 
-            LoadTiles(fileStream);
+           
+            levelTexture = Content.Load<Texture2D>("Levels/level0");
 
             // Load background layer textures. For now, all levels must
             // use the same backgrounds and only use the left-most part of them.
@@ -103,183 +105,10 @@ namespace xna_game
                 int segmentIndex = levelIndex;
                 layers[i] = Content.Load<Texture2D>("Backgrounds/Layer" + i + "_" + segmentIndex);
             }
+            player = new Player(this, new Vector2(60, 400));
 
         }
 
-        /// <summary>
-        /// Iterates over every tile in the structure file and loads its
-        /// appearance and behavior. This method also validates that the
-        /// file is well-formed with a player start point, exit, etc.
-        /// </summary>
-        /// <param name="fileStream">
-        /// A stream containing the tile data.
-        /// </param>
-        private void LoadTiles(Stream fileStream)
-        {
-            // Load the level and ensure all of the lines are the same length.
-            int width;
-            List<string> lines = new List<string>();
-            using (StreamReader reader = new StreamReader(fileStream))
-            {
-                string line = reader.ReadLine();
-                width = line.Length;
-                while (line != null)
-                {
-                    lines.Add(line);
-                    if (line.Length != width)
-                        throw new Exception(String.Format("The length of line {0} is different from all preceeding lines.", lines.Count));
-                    line = reader.ReadLine();
-                }
-            }
-
-            // Allocate the tile grid.
-            tiles = new Tile[width, lines.Count];
-
-            // Loop over every tile position,
-            for (int y = 0; y < Height; ++y)
-            {
-                for (int x = 0; x < Width; ++x)
-                {
-                    // to load each tile.
-                    char tileType = lines[y][x];
-                    tiles[x, y] = LoadTile(tileType, x, y);
-                }
-            }
-
-            // Verify that the level has a beginning and an end.
-            if (Player == null)
-                throw new NotSupportedException("A level must have a starting point.");
-            if (exit == InvalidPosition)
-                throw new NotSupportedException("A level must have an exit.");
-
-        }
-
-        /// <summary>
-        /// Loads an individual tile's appearance and behavior.
-        /// </summary>
-        /// <param name="tileType">
-        /// The character loaded from the structure file which
-        /// indicates what should be loaded.
-        /// </param>
-        /// <param name="x">
-        /// The X location of this tile in tile space.
-        /// </param>
-        /// <param name="y">
-        /// The Y location of this tile in tile space.
-        /// </param>
-        /// <returns>The loaded tile.</returns>
-        private Tile LoadTile(char tileType, int x, int y)
-        {
-            switch (tileType)
-            {
-                // Blank space
-                case '.':
-                    return new Tile(null, TileCollision.Passable);
-
-                // Exit
-                case 'X':
-                    return LoadExitTile(x, y);
-
-                // Gem
-                case 'G':
-                    //return LoadGemTile(x, y);
-
-                // Floating platform
-                case '-':
-                    return LoadTile("Platform", TileCollision.Platform);
-
-                // Various enemies
-                case 'A':
-                    //return LoadEnemyTile(x, y, "MonsterA");
-                case 'B':
-                   // return LoadEnemyTile(x, y, "MonsterB");
-                case 'C':
-                    //return LoadEnemyTile(x, y, "MonsterC");
-                case 'D':
-                    //return LoadEnemyTile(x, y, "MonsterD");
-
-                // Platform block
-                case '~':
-                    return LoadVarietyTile("BlockB", 2, TileCollision.Platform);
-
-                // Passable block
-                case ':':
-                    return LoadVarietyTile("BlockB", 2, TileCollision.Passable);
-
-                // Player 1 start point
-                case '1':
-                    return LoadStartTile(x, y);
-
-                // Impassable block
-                case '#':
-                    return LoadVarietyTile("BlockA", 7, TileCollision.Impassable);
-
-                // Unknown tile type character
-                default:
-                    throw new NotSupportedException(String.Format("Unsupported tile type character '{0}' at position {1}, {2}.", tileType, x, y));
-            }
-        }
-
-        /// <summary>
-        /// Creates a new tile. The other tile loading methods typically chain to this
-        /// method after performing their special logic.
-        /// </summary>
-        /// <param name="name">
-        /// Path to a tile texture relative to the Content/Tiles directory.
-        /// </param>
-        /// <param name="collision">
-        /// The tile collision type for the new tile.
-        /// </param>
-        /// <returns>The new tile.</returns>
-        private Tile LoadTile(string name, TileCollision collision)
-        {
-            return new Tile(Content.Load<Texture2D>("Tiles/" + name), collision);
-        }
-
-
-        /// <summary>
-        /// Loads a tile with a random appearance.
-        /// </summary>
-        /// <param name="baseName">
-        /// The content name prefix for this group of tile variations. Tile groups are
-        /// name LikeThis0.png and LikeThis1.png and LikeThis2.png.
-        /// </param>
-        /// <param name="variationCount">
-        /// The number of variations in this group.
-        /// </param>
-        private Tile LoadVarietyTile(string baseName, int variationCount, TileCollision collision)
-        {
-            int index = random.Next(variationCount);
-            return LoadTile(baseName + index, collision);
-        }
-
-
-        /// <summary>
-        /// Instantiates a player, puts him in the level, and remembers where to put him when he is resurrected.
-        /// </summary>
-        private Tile LoadStartTile(int x, int y)
-        {
-            if (Player != null)
-                throw new NotSupportedException("A level may only have one starting point.");
-
-            start = RectangleExtensions.GetBottomCenter(GetBounds(x, y));
-            player = new Player(this, new Vector2(10, 10));
-
-            return new Tile(null, TileCollision.Passable);
-        }
-
-        /// <summary>
-        /// Remembers the location of the level's exit.
-        /// </summary>
-        private Tile LoadExitTile(int x, int y)
-        {
-            if (exit != InvalidPosition)
-                throw new NotSupportedException("A level may only have one exit.");
-
-            exit = GetBounds(x, y).Center;
-
-            return LoadTile("Exit", TileCollision.Passable);
-        }
         /// <summary>
         /// Unloads the level content.
         /// </summary>
@@ -291,48 +120,6 @@ namespace xna_game
         #endregion
 
         #region Bounds and collision
-
-        /// <summary>
-        /// Gets the collision mode of the tile at a particular location.
-        /// This method handles tiles outside of the levels boundries by making it
-        /// impossible to escape past the left or right edges, but allowing things
-        /// to jump beyond the top of the level and fall off the bottom.
-        /// </summary>
-        public TileCollision GetCollision(int x, int y)
-        {
-            // Prevent escaping past the level ends.
-            if (x < 0 || x >= Width)
-                return TileCollision.Impassable;
-            // Allow jumping past the level top and falling through the bottom.
-            if (y < 0 || y >= Height)
-                return TileCollision.Passable;
-
-            return tiles[x, y].Collision;
-        }
-
-        /// <summary>
-        /// Gets the bounding rectangle of a tile in world space.
-        /// </summary>        
-        public Rectangle GetBounds(int x, int y)
-        {
-            return new Rectangle(x * Tile.Width, y * Tile.Height, Tile.Width, Tile.Height);
-        }
-
-        /// <summary>
-        /// Width of level measured in tiles.
-        /// </summary>
-        public int Width
-        {
-            get { return tiles.GetLength(0); }
-        }
-
-        /// <summary>
-        /// Height of the level measured in tiles.
-        /// </summary>
-        public int Height
-        {
-            get { return tiles.GetLength(1); }
-        }
 
         #endregion
 
@@ -353,7 +140,7 @@ namespace xna_game
             if(false)
             {
                 // Still want to perform physics on the player.
-                Player.ApplyPhysics(gameTime);
+                //Player.ApplyPhysics(gameTime);
             }
             else if (ReachedExit)
             {
@@ -366,13 +153,8 @@ namespace xna_game
             else
             {
                 timeRemaining -= gameTime.ElapsedGameTime;
-                Player.Update(gameTime, keyboardState, gamePadState, orientation);
+                Player.Update(gameTime, keyboardState, gamePadState, orientation, levelTexture);
 
-                // Falling off the bottom of the level kills the player.
-                if (Player.BoundingRectangle.Top >= Height * Tile.Height)
-                {
-                    //OnPlayerKilled(null);
-                }
 
             }
 
@@ -392,37 +174,18 @@ namespace xna_game
         public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
             for (int i = 0; i <= EntityLayer; ++i)
+            {
                 spriteBatch.Draw(layers[i], Vector2.Zero, Color.White);
+            }
 
-            DrawTiles(spriteBatch);
+            //DrawTiles(spriteBatch);
+            
 
 
             Player.Draw(gameTime, spriteBatch);
 
             for (int i = EntityLayer + 1; i < layers.Length; ++i)
                 spriteBatch.Draw(layers[i], Vector2.Zero, Color.White);
-        }
-
-        /// <summary>
-        /// Draws each tile in the level.
-        /// </summary>
-        private void DrawTiles(SpriteBatch spriteBatch)
-        {
-            // For each tile position
-            for (int y = 0; y < Height; ++y)
-            {
-                for (int x = 0; x < Width; ++x)
-                {
-                    // If there is a visible tile in that position
-                    Texture2D texture = tiles[x, y].Texture;
-                    if (texture != null)
-                    {
-                        // Draw it in screen space.
-                        Vector2 position = new Vector2(x, y) * Tile.Size;
-                        spriteBatch.Draw(texture, position, Color.White);
-                    }
-                }
-            }
         }
 
         #endregion
