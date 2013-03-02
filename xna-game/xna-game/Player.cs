@@ -63,15 +63,9 @@ namespace xna_game
         Color[] playerTextureData;
         Color[] levelTextureData;
 
-        private float prevx;
-        private float prevy;
-        bool xMovement;
-        bool yMovement;
+        private float collidedY;
+        private float collidedX;
 
-        public bool IsOnGround
-        {
-            get { return isOnGround; }
-        }
         bool isOnGround;
 
         public Player(Level level, Vector2 position)
@@ -157,8 +151,6 @@ namespace xna_game
         {
             //System.Console.WriteLine("in get input");
             // Ignore small movements to prevent running in place.
-            xMovement = false;
-            yMovement = false;
             if (Math.Abs(movement) < 0.5f)
             {
                 movement = 0.0f;
@@ -171,16 +163,14 @@ namespace xna_game
                 keyboardState.IsKeyDown(Keys.Left) ||
                 keyboardState.IsKeyDown(Keys.A))
             {
-                System.Console.WriteLine("moving left");
+                //System.Console.WriteLine("moving left");
                 movement = -1.0f;
-                xMovement = true;
             }
             else if (gamePadState.IsButtonDown(Buttons.DPadRight) ||
                      keyboardState.IsKeyDown(Keys.Right) ||
                      keyboardState.IsKeyDown(Keys.D))
             {
                 movement = 1.0f;
-                xMovement = true;
             }
 
             // Check if the player wants to jump.
@@ -204,7 +194,7 @@ namespace xna_game
             velocity.Y = DoJump(velocity.Y, gameTime);
             //Console.WriteLine(velocity.X);
             // Apply pseudo-drag horizontally.
-            if (IsOnGround)
+            if (isOnGround)
             {
                 //Console.WriteLine("is on the ground");
                 velocity.X *= GroundDragFactor;
@@ -238,7 +228,7 @@ namespace xna_game
             if (isJumping)
             {
                 // Begin or continue a jump
-                if ((!wasJumping && IsOnGround) || jumpTime > 0.0f)
+                if ((!wasJumping && isOnGround) || jumpTime > 0.0f)
                 {
                     jumpTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 }
@@ -275,21 +265,26 @@ namespace xna_game
             {
                 //Console.WriteLine("collided");
                 //System.Console.WriteLine(bounds.Top + "" + bounds.Bottom);
-                Position = new Vector2(Position.X, previousPosition.Y);
+                if (isOnGround)
+                {
+                    Position = new Vector2(Position.X, previousPosition.Y);
+                }
+                else
+                {
+                    Position = new Vector2(previousPosition.X, previousPosition.Y);
+                }
 
                 // Perform further collisions with the new bounds.
                 bounds = BoundingRectangle;
-                isOnGround = true;
             }
             else
             {
                 Console.WriteLine("falling");
-                isOnGround = false;
             }
             previousBottom = bounds.Bottom;
         }
 
-        public static bool IntersectPixels(Rectangle rectangleA, Color[] dataA,
+        public bool IntersectPixels(Rectangle rectangleA, Color[] dataA,
                                            Rectangle rectangleB, Color[] dataB)
         {
             // Find the bounds of the rectangle intersection
@@ -314,7 +309,14 @@ namespace xna_game
                     // If both pixels are not completely transparent,
                     if (colorA.A != 0 && colorB.A != 0)
                     {
-                        System.Console.WriteLine("collided at: " + (x - rectangleA.Left) + " " + (y - rectangleA.Top) + "against " + (x - rectangleB.Left) + " " + (y - rectangleB.Top));
+                        //System.Console.WriteLine("collided at: " + (x - rectangleA.Left) + " " + (y - rectangleA.Top) + "against " + (x - rectangleB.Left) + " " + (y - rectangleB.Top));
+                        if (colorB.B > 200)
+                        {
+                            isOnGround = true;
+                        }
+                        collidedY = (y - rectangleB.Top);
+                        collidedX = (x - rectangleB.Left);
+                        //System.Console.WriteLine(collidedY);
                         // then an intersection has been found
                         return true;
                     }
