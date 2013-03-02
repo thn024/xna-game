@@ -105,7 +105,7 @@ namespace xna_game
                 int segmentIndex = levelIndex;
                 layers[i] = Content.Load<Texture2D>("Backgrounds/Layer" + i + "_" + segmentIndex);
             }
-            player = new Player(this, new Vector2(60, 400));
+            player = new Player(this, new Vector2(60, 300));
 
         }
 

@@ -51,7 +51,6 @@ namespace xna_game
         // Jumping state
         private bool isJumping;
         private bool wasJumping;
-        private bool inAJump;
         private float jumpTime;
 
         private Rectangle localBounds;
@@ -64,8 +63,18 @@ namespace xna_game
         Color[] playerTextureData;
         Color[] levelTextureData;
 
+        Texture2D leftArmTex;
+        Texture2D rightArmTex;
+        Texture2D legTex;
+        Texture2D headTex;
+        Color[] leftArmData;
+        Color[] rightArmData;
+        Color[] legData;
+        Color[] headData;
+
         private float collidedY;
         private float collidedX;
+        private bool horizontalCollision;
 
         bool isOnGround;
 
@@ -97,7 +106,7 @@ namespace xna_game
                 int left = (int)Math.Round(Position.X - playerWidth/2) + localBounds.X;
                 int top = (int)Math.Round(Position.Y - playerHeight/2) + localBounds.Y;
                 //System.Console.WriteLine(Position.Y);
-                return new Rectangle((int)Position.X, (int)Position.Y, playerWidth/2, playerHeight/2);
+                return new Rectangle((int)Position.X, (int)Position.Y, playerWidth, playerHeight);
             }
         }
         
@@ -110,13 +119,35 @@ namespace xna_game
             //playerTexture = Level.Content.Load<Texture2D>("Sprites/Player/Idle");
             playerTexture = Level.Content.Load<Texture2D>("char");
             levelTexture = Level.Content.Load<Texture2D>("Levels/Level0");
+            leftArmTex = Level.Content.Load<Texture2D>("left-col");
+            rightArmTex = Level.Content.Load<Texture2D>("right-col");
+            legTex = Level.Content.Load<Texture2D>("feet-coll");
+            headTex = Level.Content.Load<Texture2D>("head-col");
+
 
             levelTextureData =
                 new Color[levelTexture.Width * levelTexture.Height];
             levelTexture.GetData(levelTextureData);
+
             playerTextureData =
                 new Color[playerTexture.Width * playerTexture.Height];
             playerTexture.GetData(playerTextureData);
+
+            leftArmData =
+                new Color[leftArmTex.Width * leftArmTex.Height];
+            leftArmTex.GetData(leftArmData);
+
+            rightArmData =
+                new Color[rightArmTex.Width * rightArmTex.Height];
+            rightArmTex.GetData(rightArmData);
+
+            legData =
+                new Color[legTex.Width * legTex.Height];
+            legTex.GetData(legData);
+
+            headData =
+                new Color[headTex.Width * headTex.Height];
+            headTex.GetData(headData);
 
             // Calculate bounds within texture size.
             //playerWidth = 25;
@@ -264,6 +295,8 @@ namespace xna_game
             Rectangle bounds = BoundingRectangle;
             //System.Console.WriteLine(bounds.Top + "" + bounds.Bottom);
             isOnGround = false;
+            horizontalCollision = false;
+            /*
             if ((IntersectPixels(bounds, playerTextureData, screenRectangle, levelTextureData)))
             //if ((IntersectPixels(screenRectangle, levelTextureData, bounds, playerTextureData)))
             {
@@ -282,19 +315,42 @@ namespace xna_game
                 }
                 else
                 {
-                    System.Console.WriteLine(inAJump);
-                    if (inAJump)
-                    {
-                        Position = new Vector2(previousPosition.X, Position.Y);
-                    }
-                    else
-                    {
-                        Position = new Vector2(previousPosition.X, previousPosition.Y);
-                    }
+                    Position = new Vector2(previousPosition.X, previousPosition.Y);
                 }
 
                 // Perform further collisions with the new bounds.
                 bounds = BoundingRectangle;
+            }
+             */
+            //if it intersects with the ground
+            if ((IntersectPixels(bounds, legData, screenRectangle, levelTextureData, false)))
+            {
+                Console.WriteLine("leg collision");
+                Position = new Vector2(Position.X, previousPosition.Y);
+                isOnGround = true;
+            }
+            if ((IntersectPixels(bounds, rightArmData, screenRectangle, levelTextureData, true)))
+            {
+                Console.WriteLine("right collision");
+                Position = new Vector2(previousPosition.X, Position.Y);
+                isOnGround = true;
+            }
+            else if ((IntersectPixels(bounds, leftArmData, screenRectangle, levelTextureData, true)))
+            {
+                Console.WriteLine("left collision");
+                Position = new Vector2(previousPosition.X, Position.Y);
+                isOnGround = true;
+            }
+            if ((IntersectPixels(bounds, headData, screenRectangle, levelTextureData, false)))
+            {
+                //Console.WriteLine("head collision");
+                if (horizontalCollision == true)
+                {
+                    Console.WriteLine("head collision");
+                    position.Y += 3;
+                }
+                    Position = new Vector2(previousPosition.X, previousPosition.Y);
+                isOnGround = true;
             }
             else
             {
@@ -304,7 +360,7 @@ namespace xna_game
         }
 
         public bool IntersectPixels(Rectangle rectangleA, Color[] dataA,
-                                           Rectangle rectangleB, Color[] dataB)
+                                           Rectangle rectangleB, Color[] dataB, bool horizontal)
         {
             // Find the bounds of the rectangle intersection
             int top = Math.Max(rectangleA.Top, rectangleB.Top);
@@ -329,23 +385,15 @@ namespace xna_game
                     if (colorA.A != 0 && colorB.A != 0)
                     {
                         //System.Console.WriteLine("collided at: " + (x - rectangleA.Left) + " " + (y - rectangleA.Top) + "against " + (x - rectangleB.Left) + " " + (y - rectangleB.Top));
-                        if (colorB.B > 200)
+                        if (colorB.R < 200 && horizontal)
                         {
-                            System.Console.WriteLine("on ground");
-                            if (dataB[(x - rectangleB.Left) + ((int)previousPosition.Y + 32) * rectangleB.Width].B > 200)
-                            {
-                                System.Console.WriteLine("was blue above");
-                                previousPosition.Y = previousPosition.Y - 4;
-                            }
-                            isOnGround = true;
+                            horizontalCollision = true;
+                            position.Y -= 3;
                         }
                         else
                         {
-                            System.Console.WriteLine(colorB.B);
+                             //position.Y = previousPosition.Y;
                         }
-                        collidedY = (y - rectangleB.Top);
-                        collidedX = (x - rectangleB.Left);
-                        //System.Console.WriteLine(collidedY);
                         // then an intersection has been found
                         return true;
                     }
