@@ -12,6 +12,7 @@ using System.Windows.Forms;
 
 using XKeys = Microsoft.Xna.Framework.Input.Keys;
 using System.Diagnostics;
+using System.IO;
 
 namespace xna_game
 {
@@ -38,8 +39,10 @@ namespace xna_game
         Texture2D crosshair;
         KeyboardState keyState;
         KeyboardState prevKeyState;
+        private GamePadState gamePadState;
         ParticleEngine2D.ParticleEngine particleEngine;
         Vector2 charPos = new Vector2(230, 380);
+        Level level;
         float startY, jumpspeed = 0;
         bool jumping = false;//Init jumping to false
 
@@ -90,6 +93,19 @@ namespace xna_game
             textures.Add(Content.Load<Texture2D>("star"));
             textures.Add(Content.Load<Texture2D>("diamond"));
             particleEngine = new ParticleEngine2D.ParticleEngine(textures, new Vector2(400, 240));
+
+            LoadLevel();
+        }
+
+        private void LoadLevel()
+        {
+            if (level != null)
+                level.Dispose();
+
+            // Load the level.
+            string levelPath = "Content/Levels/0.txt";
+            //System.Console.WriteLine(Directory.GetCurrentDirectory());
+            using (Stream fileStream = TitleContainer.OpenStream(levelPath)) level = new Level(Services, fileStream, 0);
         }
 
         /// <summary>
@@ -119,7 +135,10 @@ namespace xna_game
                 particleEngine.EmitterLocation = new Vector2(Mouse.GetState().X, Mouse.GetState().Y);
                 particleEngine.GenerateParticlesClick();
             }
+            gamePadState = GamePad.GetState(PlayerIndex.One);
+
             particleEngine.Update(gameTime);
+            level.Update(gameTime, keyState, gamePadState, Window.CurrentOrientation);
             base.Update(gameTime);
         }
 
@@ -135,15 +154,10 @@ namespace xna_game
             
 
             spriteBatch.Begin();
-            drawBackground();
+            level.Draw(gameTime, spriteBatch);
             spriteBatch.End();
 
             particleEngine.Draw(spriteBatch);
-
-            spriteBatch.Begin();
-            drawCrosshair();
-            drawCharacter();
-            spriteBatch.End();
 
             base.Draw(gameTime);
         }
@@ -176,7 +190,7 @@ namespace xna_game
             {
                 charPos.Y -= jumpspeed;//Making it go up
                 jumpspeed += 1;//Some math (explained later)
-                System.Console.WriteLine(charPos.Y);
+                //System.Console.WriteLine(charPos.Y);
                 if (charPos.Y <= 200)
                 //If it's farther than ground
                 {
@@ -233,7 +247,7 @@ namespace xna_game
             else if (keyState.IsKeyDown(XKeys.A))
             {
                 charPos.X -= 5;
-                System.Console.WriteLine("left");
+                //System.Console.WriteLine("left");
             }
             else if (keyState.IsKeyDown(XKeys.D))
             {
