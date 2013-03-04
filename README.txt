@@ -4,6 +4,7 @@ Tutorial:
 
 to get started: you should get:
 Visual Studio 2010
+Microsoft XNA Game Studio	http://www.microsoft.com/en-us/download/details.aspx?id=23714
 DirectX SDK: 				http://www.microsoft.com/en-us/download/confirmation.aspx?id=6812
 git: 					http://git-scm.com/downloads
 git extentions:				http://code.google.com/p/gitextensions/
